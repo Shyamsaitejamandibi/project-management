@@ -11,6 +11,17 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(cors());
 
+app.get("/", (req, res) => {
+  return res.status(200).json({ message: "Hello World" });
+});
+
+app.get("/test", async (req, res) => {
+  const db = await connectToDatabase();
+  console.log(db);
+  const all = await Project.find().sort({ created_at: -1 });
+  return res.status(200).json({ message: "Hello World", all });
+});
+
 // Projects
 app.get("/projects", async (req, res) => {
   await connectToDatabase();

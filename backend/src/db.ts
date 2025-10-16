@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import "dotenv/config";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -8,8 +9,7 @@ declare global {
 export async function connectToDatabase(): Promise<typeof mongoose> {
   if (global.__mongooseConn) return global.__mongooseConn;
 
-  const uri =
-    "mongodb+srv://shyamsaitejam_db_user:qUMOLD4tqKrIGvtM@cluster0.xt9uwed.mongodb.net";
+  const uri = process.env.MONGODB_URI;
   if (!uri) {
     throw new Error("MONGODB_URI is not set");
   }
