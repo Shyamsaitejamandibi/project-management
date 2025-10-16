@@ -1,7 +1,9 @@
+import "dotenv/config";
 import express, { Request, Response } from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import { Project, Column, Task } from "./models";
+import { connectToDatabase } from "./db";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -11,11 +13,13 @@ app.use(cors());
 
 // Projects
 app.get("/projects", async (req, res) => {
+  await connectToDatabase();
   const all = await Project.find().sort({ created_at: -1 });
   return res.status(200).json(all);
 });
 
 app.post("/projects", async (req, res) => {
+  await connectToDatabase();
   const project = await Project.create({
     name: req.body.name,
     description: req.body.description ?? "",
@@ -31,6 +35,7 @@ app.post("/projects", async (req, res) => {
 });
 
 app.delete("/projects/:id", async (req, res) => {
+  await connectToDatabase();
   const { id } = req.params;
   await Project.findByIdAndDelete(id);
   const projectColumns = await Column.find({ project_id: id });
@@ -44,6 +49,7 @@ app.delete("/projects/:id", async (req, res) => {
 
 // Columns
 app.get("/projects/:projectId/columns", async (req, res) => {
+  await connectToDatabase();
   const { projectId } = req.params;
   const cols = await Column.find({ project_id: projectId }).sort({
     position: 1,
@@ -53,12 +59,14 @@ app.get("/projects/:projectId/columns", async (req, res) => {
 
 // Tasks
 app.get("/projects/:projectId/tasks", async (req, res) => {
+  await connectToDatabase();
   const { projectId } = req.params;
   const tsks = await Task.find({ project_id: projectId }).sort({ position: 1 });
   return res.status(200).json(tsks);
 });
 
 app.post("/tasks", async (req, res) => {
+  await connectToDatabase();
   const { projectId, columnId, title, description } = req.body;
   const columnTasks = await Task.find({ column_id: columnId });
   const maxPosition =
@@ -76,6 +84,7 @@ app.post("/tasks", async (req, res) => {
 });
 
 app.patch("/tasks/:id", async (req, res) => {
+  await connectToDatabase();
   const { id } = req.params;
   await Task.updateOne({ _id: id }, req.body);
   const updated = await Task.findById(id);
@@ -83,23 +92,22 @@ app.patch("/tasks/:id", async (req, res) => {
 });
 
 app.delete("/tasks/:id", async (req, res) => {
+  await connectToDatabase();
   const { id } = req.params;
   await Task.findByIdAndDelete(id);
   return res.status(200).json({ ok: true });
 });
 
-const start = async () => {
-  try {
-    await mongoose.connect(
-      "mongodb+srv://shyamsaitejam_db_user:qUMOLD4tqKrIGvtM@cluster0.xt9uwed.mongodb.net"
-    );
-    app.listen(3000, () => console.log("Server started on port 3000"));
-  } catch (error) {
-    console.error(error);
-    process.exit(1);
-  }
-};
-
-start();
+if (process.env.NODE_ENV !== "production") {
+  (async () => {
+    try {
+      await connectToDatabase();
+      app.listen(3000, () => console.log("Server started on port 3000"));
+    } catch (error) {
+      console.error(error);
+      process.exit(1);
+    }
+  })();
+}
 
 export default app;
