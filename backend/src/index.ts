@@ -171,7 +171,7 @@ app.post("/projects/:projectId/ai/ask", async (req, res) => {
       Column.find({ project_id: projectId }).sort({ position: 1 }),
       Task.find({ project_id: projectId }).sort({ position: 1 }),
     ]);
-
+    console.log(columns, tasks, project.name, question);
     const answer = await answerQuestion(project.name, columns, tasks, question);
     return res.status(200).json({ answer });
   } catch (error) {
