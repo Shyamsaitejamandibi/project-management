@@ -7,13 +7,27 @@ export async function summarizeProject(
   tasks: any[]
 ): Promise<string> {
   try {
+    const toIdString = (id: any) =>
+      typeof id === "string" ? id : id?.toString?.() ?? String(id);
+
     const tasksByColumn = columns.map((column) => ({
       columnName: column.name,
-      tasks: tasks.filter((task) => task.column_id === column._id.toString()),
+      columnId: toIdString(column._id),
+      tasks: tasks.filter(
+        (task) => toIdString(task.column_id) === toIdString(column._id)
+      ),
     }));
 
+    const doneColumns = columns.filter(
+      (c) => String(c.name).trim().toLowerCase() === "done"
+    );
+    const doneColumnIds = new Set(doneColumns.map((c) => toIdString(c._id)));
+    const doneTasks = tasks.filter((t) =>
+      doneColumnIds.has(toIdString(t.column_id))
+    );
+
     const prompt = `
-        Please provide a concise summary of the project "${projectName}" based on the following task data:
+        Provide a very brief project summary for "${projectName}" based on the data below.
         
         ${tasksByColumn
           .map(
@@ -28,13 +42,14 @@ export async function summarizeProject(
           )
           .join("\n")}
         
-        Please provide:
-        1. Overall project status and progress
-        2. Key tasks and priorities
-        3. Any potential blockers or issues
-        4. Recommendations for next steps
+        Completed (Done) tasks (${doneTasks.length}):
+        ${doneTasks.map((t) => `- ${t.title}`).join("\n") || "- None"}
         
-        Keep the summary concise but informative (2-3 paragraphs max).
+        Output format:
+        - Overall project status and progress
+        - 3–6 short bullet points
+        - Plain text only, no intro/outro
+        - Max 80 words total
       `;
 
     const result = await generateText({
@@ -55,15 +70,38 @@ export async function answerQuestion(
   question: string
 ): Promise<string> {
   try {
+    const toIdString = (id: any) =>
+      typeof id === "string" ? id : id?.toString?.() ?? String(id);
+
     const tasksByColumn = columns.map((column) => ({
       columnName: column.name,
-      tasks: tasks.filter((task) => task.column_id === column._id.toString()),
+      columnId: toIdString(column._id),
+      tasks: tasks.filter(
+        (task) => toIdString(task.column_id) === toIdString(column._id)
+      ),
     }));
     console.log(tasksByColumn);
+
+    const doneColumns = columns.filter(
+      (c) => String(c.name).trim().toLowerCase() === "done"
+    );
+    const doneColumnIds = new Set(doneColumns.map((c) => toIdString(c._id)));
+    const doneTasks = tasks.filter((t) =>
+      doneColumnIds.has(toIdString(t.column_id))
+    );
+
     const prompt = `
-        You are an AI assistant helping with project management for "${projectName}". 
-        Based on the following project data, please answer the user's question.
+        You help with project management for "${projectName}".
+        Answer the user's question using the data below. Be brief.
         
+        Quick facts:
+        - Completed (Done) tasks: ${doneTasks.length}
+        ${
+          doneTasks
+            .map((t) => `- ${t.title}: ${t.description || "No description"}`)
+            .join("\n") || "- None"
+        }
+
         Project Data:
         ${tasksByColumn
           .map(
@@ -80,7 +118,11 @@ export async function answerQuestion(
         
         User Question: ${question}
         
-        Please provide a helpful, accurate answer based on the project data. If the question cannot be answered with the available information, please say so and suggest what additional information might be needed.
+        Output constraints:
+        - 1–3 short sentences OR 3–5 bullets
+        - Answer directly; no preamble
+        - If unknown, say "Not enough info" and suggest 1 next step
+        - Max 60 words
       `;
 
     const result = await generateText({
