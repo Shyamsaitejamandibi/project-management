@@ -59,7 +59,7 @@ export async function answerQuestion(
       columnName: column.name,
       tasks: tasks.filter((task) => task.column_id === column._id.toString()),
     }));
-
+    console.log(tasksByColumn);
     const prompt = `
         You are an AI assistant helping with project management for "${projectName}". 
         Based on the following project data, please answer the user's question.
