@@ -16,8 +16,9 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
+    "@google/generative-ai": "^0.21.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^5.1.0",
     "mongoose": "^8.19.1",
     "ts-node": "^10.9.2"

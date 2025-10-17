@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ArrowLeft, Plus } from "lucide-react";
 import { TaskCard } from "./task-card";
+import { AIAssistant } from "./ai-assistant";
 import type { Column, Project, Task } from "@/lib/types";
 import { store } from "@/lib/store";
 
@@ -193,6 +194,7 @@ export function KanbanBoard({ project, onBack }: KanbanBoardProps) {
           onClose={() => setEditingTask(null)}
         />
       )}
+      <AIAssistant projectId={project._id} projectName={project.name} />
     </div>
   );
 }

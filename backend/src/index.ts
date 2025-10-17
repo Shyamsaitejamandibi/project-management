@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import { Project, Column, Task } from "./models";
 import { connectToDatabase } from "./db";
+import { aiService } from "./ai-service";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -43,6 +44,24 @@ app.post("/projects", async (req, res) => {
     )
   );
   return res.status(201).json(project);
+});
+
+app.patch("/projects/:id", async (req, res) => {
+  await connectToDatabase();
+  const { id } = req.params;
+  const { name, description } = req.body;
+
+  const updateData: any = {};
+  if (name !== undefined) updateData.name = name;
+  if (description !== undefined) updateData.description = description;
+
+  const updatedProject = await Project.findByIdAndUpdate(id, updateData, {
+    new: true,
+  });
+  if (!updatedProject) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+  return res.status(200).json(updatedProject);
 });
 
 app.delete("/projects/:id", async (req, res) => {
@@ -107,6 +126,67 @@ app.delete("/tasks/:id", async (req, res) => {
   const { id } = req.params;
   await Task.findByIdAndDelete(id);
   return res.status(200).json({ ok: true });
+});
+
+// AI Features
+app.post("/projects/:projectId/ai/summarize", async (req, res) => {
+  try {
+    await connectToDatabase();
+    const { projectId } = req.params;
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    const [columns, tasks] = await Promise.all([
+      Column.find({ project_id: projectId }).sort({ position: 1 }),
+      Task.find({ project_id: projectId }).sort({ position: 1 }),
+    ]);
+
+    const summary = await aiService.summarizeProject(
+      project.name,
+      columns,
+      tasks
+    );
+    return res.status(200).json({ summary });
+  } catch (error) {
+    console.error("Error generating summary:", error);
+    return res.status(500).json({ error: "Failed to generate summary" });
+  }
+});
+
+app.post("/projects/:projectId/ai/ask", async (req, res) => {
+  try {
+    await connectToDatabase();
+    const { projectId } = req.params;
+    const { question } = req.body;
+
+    if (!question || typeof question !== "string") {
+      return res.status(400).json({ error: "Question is required" });
+    }
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    const [columns, tasks] = await Promise.all([
+      Column.find({ project_id: projectId }).sort({ position: 1 }),
+      Task.find({ project_id: projectId }).sort({ position: 1 }),
+    ]);
+
+    const answer = await aiService.answerQuestion(
+      project.name,
+      columns,
+      tasks,
+      question
+    );
+    return res.status(200).json({ answer });
+  } catch (error) {
+    console.error("Error answering question:", error);
+    return res.status(500).json({ error: "Failed to answer question" });
+  }
 });
 
 if (process.env.NODE_ENV !== "production") {

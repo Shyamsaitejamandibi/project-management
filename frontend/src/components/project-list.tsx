@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Folder, Trash2 } from "lucide-react";
+import { Plus, Folder, Trash2, Edit2 } from "lucide-react";
 import type { Project } from "@/lib/types";
 import { store } from "@/lib/store";
 
@@ -12,6 +12,7 @@ export function ProjectList({ onSelectProject }: ProjectListProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   useEffect(() => {
     loadProjects();
@@ -32,6 +33,15 @@ export function ProjectList({ onSelectProject }: ProjectListProps) {
     setNewProjectName("");
     setNewProjectDescription("");
     setIsCreating(false);
+    loadProjects();
+  }
+
+  async function updateProject(
+    project: Project,
+    updates: { name: string; description: string }
+  ) {
+    await store.updateProject(project._id, updates);
+    setEditingProject(null);
     loadProjects();
   }
 
@@ -125,12 +135,23 @@ export function ProjectList({ onSelectProject }: ProjectListProps) {
                     </h3>
                   </div>
                 </div>
-                <button
-                  onClick={(e) => deleteProject(project._id, e)}
-                  className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-600 transition-all"
-                >
-                  <Trash2 size={18} />
-                </button>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingProject(project);
+                    }}
+                    className="text-slate-400 hover:text-blue-600 transition-colors"
+                  >
+                    <Edit2 size={18} />
+                  </button>
+                  <button
+                    onClick={(e) => deleteProject(project._id, e)}
+                    className="text-slate-400 hover:text-red-600 transition-colors"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
               <p className="text-slate-600 text-sm line-clamp-2">
                 {project.description || "No description"}
@@ -162,6 +183,77 @@ export function ProjectList({ onSelectProject }: ProjectListProps) {
             </button>
           </div>
         )}
+
+        {editingProject && (
+          <EditProjectModal
+            project={editingProject}
+            onSave={updateProject}
+            onClose={() => setEditingProject(null)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface EditProjectModalProps {
+  project: Project;
+  onSave: (
+    project: Project,
+    updates: { name: string; description: string }
+  ) => void;
+  onClose: () => void;
+}
+
+function EditProjectModal({ project, onSave, onClose }: EditProjectModalProps) {
+  const [name, setName] = useState(project.name);
+  const [description, setDescription] = useState(project.description);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (name.trim()) {
+      onSave(project, { name: name.trim(), description });
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+        <h2 className="text-xl font-semibold text-slate-800 mb-4">
+          Edit Project
+        </h2>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Project name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            autoFocus
+          />
+          <textarea
+            placeholder="Project description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            rows={3}
+          />
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Save Changes
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg hover:bg-slate-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

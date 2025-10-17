@@ -39,6 +39,21 @@ export const store = {
       created_at: new Date(p.created_at).toISOString(),
     };
   },
+  async updateProject(
+    projectId: string,
+    updates: { name?: string; description?: string }
+  ): Promise<Project> {
+    const p = await http<Project>(`/projects/${projectId}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+    return {
+      _id: p._id,
+      name: p.name,
+      description: p.description ?? "",
+      created_at: new Date(p.created_at).toISOString(),
+    };
+  },
   async deleteProject(projectId: string): Promise<void> {
     await http(`/projects/${projectId}`, { method: "DELETE" });
   },
@@ -112,5 +127,26 @@ export const store = {
   },
   async deleteTask(taskId: string): Promise<void> {
     await http(`/tasks/${taskId}`, { method: "DELETE" });
+  },
+
+  // AI Features
+  async summarizeProject(projectId: string): Promise<string> {
+    const response = await http<{ summary: string }>(
+      `/projects/${projectId}/ai/summarize`,
+      {
+        method: "POST",
+      }
+    );
+    return response.summary;
+  },
+  async askQuestion(projectId: string, question: string): Promise<string> {
+    const response = await http<{ answer: string }>(
+      `/projects/${projectId}/ai/ask`,
+      {
+        method: "POST",
+        body: JSON.stringify({ question }),
+      }
+    );
+    return response.answer;
   },
 };
