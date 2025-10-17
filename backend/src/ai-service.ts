@@ -1,23 +1,18 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Task, Column } from "./models";
+import { generateText } from "ai";
+import "dotenv/config";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+export async function summarizeProject(
+  projectName: string,
+  columns: any[],
+  tasks: any[]
+): Promise<string> {
+  try {
+    const tasksByColumn = columns.map((column) => ({
+      columnName: column.name,
+      tasks: tasks.filter((task) => task.column_id === column._id.toString()),
+    }));
 
-export class AIService {
-  private model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-  async summarizeProject(
-    projectName: string,
-    columns: any[],
-    tasks: any[]
-  ): Promise<string> {
-    try {
-      const tasksByColumn = columns.map((column) => ({
-        columnName: column.name,
-        tasks: tasks.filter((task) => task.column_id === column._id.toString()),
-      }));
-
-      const prompt = `
+    const prompt = `
         Please provide a concise summary of the project "${projectName}" based on the following task data:
         
         ${tasksByColumn
@@ -42,28 +37,30 @@ export class AIService {
         Keep the summary concise but informative (2-3 paragraphs max).
       `;
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
-    } catch (error) {
-      console.error("Error generating project summary:", error);
-      throw new Error("Failed to generate project summary");
-    }
+    const result = await generateText({
+      model: "openai/gpt-4o-mini",
+      prompt: prompt,
+    });
+    return result.text;
+  } catch (error) {
+    console.error("Error generating project summary:", error);
+    throw new Error("Failed to generate project summary");
   }
+}
 
-  async answerQuestion(
-    projectName: string,
-    columns: any[],
-    tasks: any[],
-    question: string
-  ): Promise<string> {
-    try {
-      const tasksByColumn = columns.map((column) => ({
-        columnName: column.name,
-        tasks: tasks.filter((task) => task.column_id === column._id.toString()),
-      }));
+export async function answerQuestion(
+  projectName: string,
+  columns: any[],
+  tasks: any[],
+  question: string
+): Promise<string> {
+  try {
+    const tasksByColumn = columns.map((column) => ({
+      columnName: column.name,
+      tasks: tasks.filter((task) => task.column_id === column._id.toString()),
+    }));
 
-      const prompt = `
+    const prompt = `
         You are an AI assistant helping with project management for "${projectName}". 
         Based on the following project data, please answer the user's question.
         
@@ -86,14 +83,23 @@ export class AIService {
         Please provide a helpful, accurate answer based on the project data. If the question cannot be answered with the available information, please say so and suggest what additional information might be needed.
       `;
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
-    } catch (error) {
-      console.error("Error answering question:", error);
-      throw new Error("Failed to answer question");
-    }
+    const result = await generateText({
+      model: "openai/gpt-4o-mini",
+      prompt: prompt,
+    });
+    return result.text;
+  } catch (error) {
+    console.error("Error answering question:", error);
+    throw new Error("Failed to answer question");
   }
 }
 
-export const aiService = new AIService();
+(async () => {
+  try {
+    console.log(
+      await answerQuestion("Test Project", [], [], "What is the project?")
+    );
+  } catch (error) {
+    console.error("Error:", error);
+  }
+})();

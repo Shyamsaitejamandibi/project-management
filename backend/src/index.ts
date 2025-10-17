@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import { Project, Column, Task } from "./models";
 import { connectToDatabase } from "./db";
-import { aiService } from "./ai-service";
+import { summarizeProject, answerQuestion } from "./ai-service";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -144,11 +144,7 @@ app.post("/projects/:projectId/ai/summarize", async (req, res) => {
       Task.find({ project_id: projectId }).sort({ position: 1 }),
     ]);
 
-    const summary = await aiService.summarizeProject(
-      project.name,
-      columns,
-      tasks
-    );
+    const summary = await summarizeProject(project.name, columns, tasks);
     return res.status(200).json({ summary });
   } catch (error) {
     console.error("Error generating summary:", error);
@@ -176,12 +172,7 @@ app.post("/projects/:projectId/ai/ask", async (req, res) => {
       Task.find({ project_id: projectId }).sort({ position: 1 }),
     ]);
 
-    const answer = await aiService.answerQuestion(
-      project.name,
-      columns,
-      tasks,
-      question
-    );
+    const answer = await answerQuestion(project.name, columns, tasks, question);
     return res.status(200).json({ answer });
   } catch (error) {
     console.error("Error answering question:", error);
