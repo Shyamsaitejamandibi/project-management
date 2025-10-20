@@ -1,62 +1,46 @@
 import type { Task } from "@/lib/types";
-import { GripVertical, Edit2, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
   task: Task;
-  onDragStart: (task: Task) => void;
-  onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
+  onDelete?: () => void;
+  isDragging?: boolean;
 }
 
-export function TaskCard({
-  task,
-  onDragStart,
-  onEdit,
-  onDelete,
-}: TaskCardProps) {
+export function TaskCard({ task, onDelete, isDragging }: TaskCardProps) {
   return (
     <div
-      draggable
-      onDragStart={() => onDragStart(task)}
-      className="bg-white rounded-lg p-4 shadow-sm border border-slate-200 cursor-move hover:shadow-md hover:border-blue-300 transition-all group"
+      className={cn(
+        "group transition-all duration-200",
+        isDragging && "opacity-50"
+      )}
     >
-      <div className="flex items-start gap-2">
-        <GripVertical
-          className="text-slate-400 flex-shrink-0 mt-0.5"
-          size={16}
-        />
+      <div className="flex items-start gap-1.5 sm:gap-2">
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-slate-800 mb-1 break-words">
+          <h4 className="font-semibold mb-1 sm:mb-2 text-xs sm:text-sm md:text-base leading-tight">
             {task.title}
-          </h3>
+          </h4>
           {task.description && (
-            <p className="text-sm text-slate-600 break-words line-clamp-3">
+            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 sm:line-clamp-3 leading-relaxed">
               {task.description}
             </p>
           )}
         </div>
-      </div>
-      <div className="flex items-center justify-end gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(task);
-          }}
-          className="text-slate-400 hover:text-blue-600 transition-colors"
-        >
-          <Edit2 size={16} />
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (confirm("Are you sure you want to delete this task?")) {
-              onDelete(task._id);
-            }
-          }}
-          className="text-slate-400 hover:text-red-600 transition-colors"
-        >
-          <Trash2 size={16} />
-        </button>
+        {onDelete && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 touch-manipulation"
+          >
+            <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4 text-destructive" />
+          </Button>
+        )}
       </div>
     </div>
   );

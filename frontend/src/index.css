@@ -117,4 +117,56 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Mobile-specific improvements */
+  @media (max-width: 640px) {
+    /* Prevent zoom on input focus */
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
+
+    /* Improve touch targets */
+    button,
+    [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Better scrolling on mobile */
+    .overflow-x-auto {
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .overflow-x-auto::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  /* Custom scrollbar for desktop */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(209 213 219) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgb(209 213 219);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(156 163 175);
+  }
 }
