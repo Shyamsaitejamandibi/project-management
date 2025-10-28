@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import type { Column } from "@/lib/types";
+import type { Column, Task } from "@/lib/types";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -42,16 +42,49 @@ export function CreateTaskDialog({
 
   const createMutation = useMutation({
     mutationFn: createTask,
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks", projectId] });
+      const previousTasks = queryClient.getQueryData<Task[]>([
+        "tasks",
+        projectId,
+      ]);
+
+      const optimisticTask: Task = {
+        _id: `temp-${Date.now()}`,
+        project_id: variables.projectId,
+        column_id: variables.columnId,
+        title: variables.title,
+        description: variables.description ?? "",
+        position: (previousTasks?.length ?? 0) + 1,
+        created_at: new Date().toISOString(),
+      };
+
+      if (previousTasks) {
+        queryClient.setQueryData(
+          ["tasks", projectId],
+          [optimisticTask, ...previousTasks]
+        );
+      } else {
+        queryClient.setQueryData(["tasks", projectId], [optimisticTask]);
+      }
+
+      return { previousTasks } as { previousTasks?: Task[] };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["tasks", projectId], context.previousTasks);
+      }
+      toast.error("Failed to create task");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] });
+    },
+    onSuccess: () => {
       toast.success("Task created successfully");
       onOpenChange(false);
       setTitle("");
       setDescription("");
       setColumnId("");
-    },
-    onError: () => {
-      toast.error("Failed to create task");
     },
   });
 

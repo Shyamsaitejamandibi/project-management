@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import type { Project } from "@/lib/types";
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -29,15 +30,45 @@ export function CreateProjectDialog({
 
   const createMutation = useMutation({
     mutationFn: createProject,
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ["projects"] });
+      const previousProjects = queryClient.getQueryData<Project[]>([
+        "projects",
+      ]);
+
+      const optimisticProject: Project = {
+        _id: `temp-${Date.now()}`,
+        name: variables.name,
+        description: variables.description ?? "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      if (previousProjects) {
+        queryClient.setQueryData(
+          ["projects"],
+          [optimisticProject, ...previousProjects]
+        );
+      } else {
+        queryClient.setQueryData(["projects"], [optimisticProject]);
+      }
+
+      return { previousProjects } as { previousProjects?: Project[] };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousProjects) {
+        queryClient.setQueryData(["projects"], context.previousProjects);
+      }
+      toast.error("Failed to create project");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onSuccess: () => {
       toast.success("Project created successfully");
       onOpenChange(false);
       setName("");
       setDescription("");
-    },
-    onError: () => {
-      toast.error("Failed to create project");
     },
   });
 

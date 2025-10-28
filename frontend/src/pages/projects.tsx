@@ -8,6 +8,7 @@ import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import type { Project } from "@/lib/types";
 
 const Projects = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -21,12 +22,30 @@ const Projects = () => {
 
   const deleteMutation = useMutation({
     mutationFn: deleteProject,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Project deleted successfully");
+    onMutate: async (projectId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["projects"] });
+      const previousProjects = queryClient.getQueryData<Project[]>([
+        "projects",
+      ]);
+      if (previousProjects) {
+        queryClient.setQueryData(
+          ["projects"],
+          previousProjects.filter((p) => (p._id === projectId ? false : true))
+        );
+      }
+      return { previousProjects } as { previousProjects?: Project[] };
     },
-    onError: () => {
+    onError: (_err, _projectId, context) => {
+      if (context?.previousProjects) {
+        queryClient.setQueryData(["projects"], context.previousProjects);
+      }
       toast.error("Failed to delete project");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onSuccess: () => {
+      toast.success("Project deleted successfully");
     },
   });
 

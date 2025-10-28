@@ -52,22 +52,60 @@ const ProjectBoard = () => {
   const updateTaskMutation = useMutation({
     mutationFn: ({ taskId, data }: { taskId: string; data: UpdateTaskInput }) =>
       updateTask(taskId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks", projectId] });
+    onMutate: async ({ taskId, data }) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks", projectId] });
+      const previousTasks = queryClient.getQueryData<Task[]>([
+        "tasks",
+        projectId,
+      ]);
+
+      if (previousTasks) {
+        const optimistic = previousTasks.map((t) =>
+          t._id === taskId ? { ...t, ...data } : t
+        );
+        queryClient.setQueryData(["tasks", projectId], optimistic);
+      }
+
+      return { previousTasks } as { previousTasks?: Task[] };
     },
-    onError: () => {
+    onError: (_err, _variables, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["tasks", projectId], context.previousTasks);
+      }
       toast.error("Failed to update task");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", projectId] });
     },
   });
 
   const deleteTaskMutation = useMutation({
     mutationFn: deleteTask,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks", projectId] });
-      toast.success("Task deleted successfully");
+    onMutate: async (taskId: string) => {
+      await queryClient.cancelQueries({ queryKey: ["tasks", projectId] });
+      const previousTasks = queryClient.getQueryData<Task[]>([
+        "tasks",
+        projectId,
+      ]);
+      if (previousTasks) {
+        queryClient.setQueryData(
+          ["tasks", projectId],
+          previousTasks.filter((t) => (t._id === taskId ? false : true))
+        );
+      }
+      return { previousTasks } as { previousTasks?: Task[] };
     },
-    onError: () => {
+    onError: (_err, _taskId, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["tasks", projectId], context.previousTasks);
+      }
       toast.error("Failed to delete task");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", projectId] });
+    },
+    onSuccess: () => {
+      toast.success("Task deleted successfully");
     },
   });
 

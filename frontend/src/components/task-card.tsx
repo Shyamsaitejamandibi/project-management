@@ -32,9 +32,20 @@ export function TaskCard({ task, onDelete, isDragging }: TaskCardProps) {
           <Button
             variant="ghost"
             size="icon"
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
+            }}
+            onPointerDown={(e) => {
+              // Prevent drag from starting when interacting with the delete button
+              e.stopPropagation();
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
             }}
             className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 touch-manipulation"
           >
